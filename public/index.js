@@ -1,6 +1,72 @@
 let transactions = [];
 let myChart;
 
+let db
+
+const request = indexedDB.open('budgetDB', 1)
+
+const checkDatabase = () => {
+  const transaction = db.transaction(['transactions'], 'readwrite')
+  const store = transaction.objectStore('transactions')
+
+  const getAll = store.getAll()
+
+  getAll.onsuccess = () => {
+console.log(getAll.result)
+    if (getAll.result.length > 0) {
+      axios.post('/api/transaction', getAll.result)
+        .then(() => {
+          const transaction = db.transaction(['transactions'], 'readwrite')
+          const store = transaction.objectStore('transactions')
+          store.clear()
+        })
+    }
+  }
+}
+
+const saveRecord = data=> {
+  const transaction = db.transaction(['transactions'], 'readwrite')
+  const store = transaction.objectStore('transactions')
+  store.add(data)
+}
+
+const modifyData = (name, value) => {
+  const transaction = db.transaction(['transactions'], 'readwrite')
+  const store = transaction.objectStore('transactions')
+
+  const cursorRequest = store.openCursor()
+
+  cursorRequest.onsuccess = event => {
+    const cursor = event.target.result
+
+    if (cursor) {
+      if (cursor.value.name === name) {
+        let data = cursor.value
+        data.value = value
+        cursor.update(data)
+      }
+      cursor.continue()
+    }
+  }
+}
+ 
+request.onupgradeneeded = event => {
+  const db = event.target.result
+
+  db.createObjectStore('transactions')
+}
+
+
+request.onsuccess = event => {
+  db = event.target.result
+
+  if (navigator.onLine) {
+    checkDatabase
+  }
+}
+
+
+
 fetch("/api/transaction")
   .then(response => {
     return response.json();
@@ -151,3 +217,5 @@ document.querySelector("#add-btn").onclick = function() {
 document.querySelector("#sub-btn").onclick = function() {
   sendTransaction(false);
 };
+
+window.addEventListener('online', checkDatabase)
