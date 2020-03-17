@@ -12,48 +12,42 @@ const checkDatabase = () => {
   const getAll = store.getAll()
 
   getAll.onsuccess = () => {
-console.log(getAll.result)
     if (getAll.result.length > 0) {
-      axios.post('/api/transaction', getAll.result)
-        .then(() => {
-          const transaction = db.transaction(['transactions'], 'readwrite')
-          const store = transaction.objectStore('transactions')
-          store.clear()
+      getAll.result.forEach(element => {
+        fetch('/api/transaction', {
+          method: "POST",
+          body: JSON.stringify(element.transaction),
+          headers: {
+            Accept: "application/json, text/plain, */*",
+            "Content-Type": "application/json"
+          }
         })
+          //clear out indexedDB after done
+          .then(() => {
+            const transact = db.transaction(['transactions'], 'readwrite');
+            const store = transact.objectStore('transactions');
+            store.clear()
+          })
+          .catch(e => console.error(e))
+
+      })
+
     }
   }
 }
 
-const saveRecord = data=> {
+const saveRecord = data => {
   const transaction = db.transaction(['transactions'], 'readwrite')
   const store = transaction.objectStore('transactions')
-  store.add(data)
+  store.add({ data })
+
 }
 
-const modifyData = (name, value) => {
-  const transaction = db.transaction(['transactions'], 'readwrite')
-  const store = transaction.objectStore('transactions')
 
-  const cursorRequest = store.openCursor()
-
-  cursorRequest.onsuccess = event => {
-    const cursor = event.target.result
-
-    if (cursor) {
-      if (cursor.value.name === name) {
-        let data = cursor.value
-        data.value = value
-        cursor.update(data)
-      }
-      cursor.continue()
-    }
-  }
-}
- 
 request.onupgradeneeded = event => {
   const db = event.target.result
 
-  db.createObjectStore('transactions')
+  db.createObjectStore('transactions', { autoIncrement: true })
 }
 
 
@@ -132,14 +126,14 @@ function populateChart() {
 
   myChart = new Chart(ctx, {
     type: 'line',
-      data: {
-        labels,
-        datasets: [{
-            label: "Total Over Time",
-            fill: true,
-            backgroundColor: "#6666ff",
-            data
-        }]
+    data: {
+      labels,
+      datasets: [{
+        label: "Total Over Time",
+        fill: true,
+        backgroundColor: "#6666ff",
+        data
+      }]
     }
   });
 }
@@ -177,7 +171,7 @@ function sendTransaction(isAdding) {
   populateChart();
   populateTable();
   populateTotal();
-  
+
   // also send to server
   fetch("/api/transaction", {
     method: "POST",
@@ -187,34 +181,34 @@ function sendTransaction(isAdding) {
       "Content-Type": "application/json"
     }
   })
-  .then(response => {    
-    return response.json();
-  })
-  .then(data => {
-    if (data.errors) {
-      errorEl.textContent = "Missing Information";
-    }
-    else {
+    .then(response => {
+      return response.json();
+    })
+    .then(data => {
+      if (data.errors) {
+        errorEl.textContent = "Missing Information";
+      }
+      else {
+        // clear form
+        nameEl.value = "";
+        amountEl.value = "";
+      }
+    })
+    .catch(err => {
+      // fetch failed, so save in indexed db
+      saveRecord(transaction);
+
       // clear form
       nameEl.value = "";
       amountEl.value = "";
-    }
-  })
-  .catch(err => {
-    // fetch failed, so save in indexed db
-    saveRecord(transaction);
-
-    // clear form
-    nameEl.value = "";
-    amountEl.value = "";
-  });
+    });
 }
 
-document.querySelector("#add-btn").onclick = function() {
+document.querySelector("#add-btn").onclick = function () {
   sendTransaction(true);
 };
 
-document.querySelector("#sub-btn").onclick = function() {
+document.querySelector("#sub-btn").onclick = function () {
   sendTransaction(false);
 };
 
