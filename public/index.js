@@ -3,7 +3,7 @@ let myChart;
 
 let db
 
-const request = indexedDB.open('budgetDB', 1)
+const request = indexedDB.open('transaction', 1)
 
 const checkDatabase = () => {
   const transaction = db.transaction(['transactions'], 'readwrite')
@@ -14,9 +14,10 @@ const checkDatabase = () => {
   getAll.onsuccess = () => {
     if (getAll.result.length > 0) {
       getAll.result.forEach(element => {
+        console.log(element)
         fetch('/api/transaction', {
           method: "POST",
-          body: JSON.stringify(element.transaction),
+          body: JSON.stringify(element.data),
           headers: {
             Accept: "application/json, text/plain, */*",
             "Content-Type": "application/json"
