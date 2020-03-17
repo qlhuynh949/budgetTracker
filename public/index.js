@@ -39,7 +39,6 @@ const checkDatabase = () => {
 const saveRecord = data => {
   const transaction = db.transaction(['transactions'], 'readwrite')
   const store = transaction.objectStore('transactions')
-  console.log(data)
   store.add({ data })
 
 }
