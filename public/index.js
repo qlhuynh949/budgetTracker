@@ -3,7 +3,7 @@ let myChart;
 
 let db
 
-const request = indexedDB.open('budgetDB', 1)
+const request = indexedDB.open('transaction', 1)
 
 const checkDatabase = () => {
   const transaction = db.transaction(['transactions'], 'readwrite')
